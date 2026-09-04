@@ -1,0 +1,46 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: docsync
+      POSTGRES_USER: docsync
+      POSTGRES_PASSWORD: docsync_password
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    environment:
+      SECRET_KEY: change-this-super-secret-key
+      JWT_SECRET_KEY: change-this-jwt-secret-key
+      DATABASE_URL: postgresql://docsync:docsync_password@db:5432/docsync
+      FRONTEND_ORIGIN: http://localhost:5173
+      # Uncomment and fill in to enable AWS S3 storage for exports:
+      # AWS_ACCESS_KEY_ID: ""
+      # AWS_SECRET_ACCESS_KEY: ""
+      # AWS_S3_BUCKET: ""
+      # AWS_REGION: "us-east-1"
+    depends_on:
+      - db
+    ports:
+      - "5000:5000"
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: http://localhost:5000
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "5173:80"
+
+volumes:
+  db_data:
